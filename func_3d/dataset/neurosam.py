@@ -154,7 +154,9 @@ class NEUROSAM(Dataset):
         if mode == "Training":
             self.video_length = args.video_length
         else:
-            self.video_length = None
+            self.video_length = None ## TODO: should we constrain the length in validation? this is taking so long
+        self.max_targets = args.max_targets
+        self.rng = np.random.RandomState(self.seed)
 
     def __len__(self):
         return len(self.name_list)
@@ -266,6 +268,15 @@ class NEUROSAM(Dataset):
 
             mask = mask.numpy()
             obj_list = np.unique(mask[mask > 0])
+            if self.max_targets is not None and len(obj_list) > self.max_targets:
+                choose_targets = self.rng.choice(obj_list, size=self.max_targets, replace=False)
+                obj_list = choose_targets
+                mask_new = np.zeros_like(mask)
+                for obj in obj_list:
+                    mask_new[mask == obj] = obj
+                mask = mask_new
+            
+            ## TODO: Add dynamic prompt suggestion here
             
             diff_obj_mask_dict = {}
 

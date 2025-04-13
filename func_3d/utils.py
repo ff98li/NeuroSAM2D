@@ -15,6 +15,7 @@ import torch
 from torch.autograd import Function
 
 import cfg
+import cv2
 
 args = cfg.parse_args()
 device = torch.device('cuda', args.gpu_device)
@@ -88,6 +89,20 @@ def save_checkpoint(states, is_best, output_dir,
         torch.save(states, os.path.join(output_dir, 'checkpoint_best.pth'))
 
 def random_click(mask, point_labels = 1, seed=None):
+    """
+    Do connected component analysis on the mask,
+    and random click on each connected component.
+    """
+    mask_copy = mask.copy().astype(np.uint8)
+    num_components, label_mask = cv2.connectedComponents(mask_copy)
+    point_coords = []
+    for i in range(1, num_components):
+        component_mask = (label_mask == i).astype(np.uint8)
+        _, pt_coord = _random_click(component_mask, point_labels, seed)
+        point_coords.append(pt_coord)
+    return np.array([1] * len(point_coords)), np.array(point_coords)
+
+def _random_click(mask, point_labels = 1, seed=None):
     # check if all masks are black
     max_label = max(set(mask.flatten()))
     if max_label == 0:
@@ -105,6 +120,21 @@ def random_click(mask, point_labels = 1, seed=None):
     return point_labels, np.array([output_index_0, output_index_1])
 
 def generate_bbox(mask, variation=0, seed=None):
+    """
+    Do connected component analysis on the mask,
+    and generate bbox for each connected component.
+    """
+    mask_copy = mask.copy().astype(np.uint8)
+    num_components, label_mask = cv2.connectedComponents(mask_copy)
+    bbox_list = []
+    for i in range(1, num_components):
+        component_mask = (label_mask == i).astype(np.uint8)
+        bbox = _generate_bbox(component_mask, variation, seed)
+        bbox_list.append(bbox)
+    bbox_list = np.array(bbox_list)
+    return bbox_list
+
+def _generate_bbox(mask, variation=0, seed=None):
     if seed is not None:
         np.random.seed(seed)
     # check if all masks are black

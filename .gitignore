@@ -171,3 +171,4 @@ sancheck/
 checkpoint/
 .log
 wandb/
+checkpoints/MedSAM2_pretrain.pth

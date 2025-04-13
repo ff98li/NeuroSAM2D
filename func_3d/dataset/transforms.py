@@ -1,5 +1,7 @@
 import monai.transforms
 import torch
+import cc3d
+import numpy as np
 
 def replace_nan_with_min(image):
     valid_values = image[~torch.isnan(image)]
@@ -13,6 +15,26 @@ def replace_nan_with_min(image):
 
     return image
 
+def semantic_to_instance(label):
+    semantic_label = label.clone().numpy()
+    temp_dtype = semantic_label.dtype
+    semantic_label = semantic_label.astype(int)
+    semantic_ids = np.unique(semantic_label)[1:]
+    instance_label = np.zeros_like(semantic_label)
+    offset = 0
+    for semantic_id in semantic_ids:
+        ith_semantic_label = (semantic_label == semantic_id).astype(int)
+        ith_instance_label, ith_instance_num = cc3d.connected_components(ith_semantic_label.squeeze(0), return_N=True)
+        if ith_instance_num == 0:
+            continue
+        ith_instance_label = ith_instance_label[None, ...]
+        semantic_mask = semantic_label == semantic_id
+        instance_label[semantic_mask] = ith_instance_label[semantic_mask] + offset
+        offset += ith_instance_num
+    instance_label_tensor = torch.from_numpy(instance_label.astype(temp_dtype))
+
+    return instance_label_tensor
+
 def get_train_transforms(img_size: int) -> monai.transforms.Compose:
 #def get_train_transforms() -> monai.transforms.Compose:
     return monai.transforms.Compose(
@@ -20,6 +42,7 @@ def get_train_transforms(img_size: int) -> monai.transforms.Compose:
             monai.transforms.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
 
             monai.transforms.Lambdad(keys=["image"], func=replace_nan_with_min),
+            monai.transforms.Lambdad(keys=["label"], func=semantic_to_instance),
 
             monai.transforms.Orientationd(keys=["image", "label"], axcodes="RAS"),
             monai.transforms.ScaleIntensityRangePercentilesd(
@@ -89,7 +112,7 @@ def get_val_transforms(img_size: int) -> monai.transforms.Compose:
             monai.transforms.Orientationd(keys=["image", "label"], axcodes="RAS"),
 
             monai.transforms.Lambdad(keys=["image"], func=replace_nan_with_min),
-
+            monai.transforms.Lambdad(keys=["label"], func=semantic_to_instance),
             monai.transforms.ScaleIntensityRangePercentilesd(
                 keys=["image"],
                 lower=0.05,

@@ -75,7 +75,9 @@ def sanity_check(args, rng):
     video_length = args.video_length * args.batch_size
     prompt_freq = args.prompt_freq
 
-    nice_train_loader, nice_test_loader = get_dataloader(args)
+    temp_args = deepcopy(args)
+    temp_args.distributed = False
+    nice_train_loader, nice_test_loader = get_dataloader(temp_args)
     for pack in nice_train_loader:
         mask_dict = pack['label']
         prompt_frame_id = list(range(0, video_length, prompt_freq))
@@ -137,15 +139,18 @@ def sanity_check(args, rng):
             ax[0].axis('off')
             if prompt == 'bbox':
                 try:
-                    bbox = bbox_dict[id][ann_obj_id]
-                    ax[0].add_patch(plt.Rectangle((bbox[0][0], bbox[0][1]), bbox[0][2] - bbox[0][0], bbox[0][3] - bbox[0][1], edgecolor='green', facecolor=(0,0,0,0), lw=2))
+                    bboxes = bbox_dict[id][ann_obj_id].clone()
+                    bboxes = bboxes.reshape(-1, 4)
+                    for bbox in bboxes:
+                        ax[0].add_patch(plt.Rectangle((bbox[0][0], bbox[0][1]), bbox[0][2] - bbox[0][0], bbox[0][3] - bbox[0][1], edgecolor='green', facecolor=(0,0,0,0), lw=2))
                 except KeyError:
                     pass
             elif prompt == 'click':
                 try:
-                    pt = pt_dict[id][ann_obj_id].cpu().numpy()
-                    pt = pt.squeeze(0)
-                    ax[0].scatter(pt[0], pt[1], s=100, c='red')
+                    pts = pt_dict[id][ann_obj_id].clone()
+                    pts = pts.reshape(-1, 2).cpu().numpy()
+                    for pt in pts:
+                        ax[0].scatter(pt[0], pt[1], s=100, c='red')
                 except KeyError:
                     pass
             #ax[1].imshow(mask[0, 0, :, :].numpy(), cmap='gray')
@@ -426,4 +431,5 @@ if __name__ == '__main__':
     rng = set_all_seeds(args.seed)
     if args.global_rank == 0:
         sanity_check(args, rng)
+        torch.cuda.empty_cache()
     main(args, rng)

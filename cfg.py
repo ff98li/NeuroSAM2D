@@ -37,6 +37,7 @@ def parse_args():
     parser.add_argument('-weights', type=str, default = 0, help='the weights file you want to test')
     parser.add_argument('-multimask_output', type=int, default=1 , help='the number of masks output for multi-class segmentation')
     parser.add_argument('-memory_bank_size', type=int, default=16, help='sam 2d memory bank size')
+    parser.add_argument('-max_targets', type=int, default=5, help='max number of targets for each image')
     parser.add_argument(
     '-data_path',
     type=str,

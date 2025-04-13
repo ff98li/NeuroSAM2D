@@ -22,13 +22,12 @@ export WANDB_MODE="offline"
 
 NIFTI_DATA_PATH="/home/lifeifei/projects/rrg-mgoubran/NeuroSAM_data/data"
 
-IMAGE_SIZE=384
-SAM_CONFIG="sam2_hiera_t_384"
+IMAGE_SIZE=512
+SAM_CONFIG="sam2_hiera_t_512"
 VIDEO_LENGTH=4
 BATCH_SIZE=1
 SEED=2025
-
-RESUME="/home/lifeifei/scratch/codebase/Medical-SAM2/logs/NeuroSAM2D-Single-GPU-384-4-1-2025_2025_04_01_05_48_42/Model/latest_epoch.pth"
+MAX_TARGETS=8
 EXP_NAME="NeuroSAM2D-Single-GPU"
 
 python -u train_3d.py \
@@ -48,4 +47,4 @@ python -u train_3d.py \
     -data_path $NIFTI_DATA_PATH \
     -sam_config $SAM_CONFIG \
     -seed $SEED \
-    -resume $RESUME
+    -max_targets $MAX_TARGETS

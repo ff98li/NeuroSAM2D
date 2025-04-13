@@ -13,6 +13,7 @@ certifi
 cffi
 charset-normalizer
 comm
+connected_components_3d
 contourpy
 cycler
 debugpy

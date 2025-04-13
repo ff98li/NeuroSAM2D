@@ -234,42 +234,83 @@ def train_sam(args, net: nn.Module, optimizer1, optimizer2, train_loader,
                             if prompt == 'click':
                                 points = pt_dict[id][ann_obj_id].to(device=GPUdevice)
                                 labels = point_labels_dict[id][ann_obj_id].to(device=GPUdevice)
-                                if args.distributed:
-                                    _, _, _ = net.module.train_add_new_points(
-                                        inference_state=train_state,
-                                        frame_idx=id,
-                                        obj_id=ann_obj_id,
-                                        points=points,
-                                        labels=labels,
-                                        clear_old_points=False,
-                                    )
-                                else:
-                                    _, _, _ = net.train_add_new_points(
-                                        inference_state=train_state,
-                                        frame_idx=id,
-                                        obj_id=ann_obj_id,
-                                        points=points,
-                                        labels=labels,
-                                        clear_old_points=False,
-                                    )
+                                points = points.reshape(-1, 1, 2)
+                                labels = labels.reshape(-1, 1)
+                                for prompt_idx in range(len(points)):
+                                    if args.distributed:
+                                        _, _, _ = net.module.train_add_new_points(
+                                            inference_state=train_state,
+                                            frame_idx=id,
+                                            obj_id=ann_obj_id,
+                                            points=points[prompt_idx],
+                                            labels=labels[prompt_idx],
+                                            clear_old_points=False,
+                                        )
+                                    else:
+                                        _, _, _ = net.train_add_new_points(
+                                            inference_state=train_state,
+                                            frame_idx=id,
+                                            obj_id=ann_obj_id,
+                                            points=points[prompt_idx],
+                                            labels=labels[prompt_idx],
+                                            clear_old_points=False,
+                                        )
+
+                                #if args.distributed:
+                                #    _, _, _ = net.module.train_add_new_points(
+                                #        inference_state=train_state,
+                                #        frame_idx=id,
+                                #        obj_id=ann_obj_id,
+                                #        points=points,
+                                #        labels=labels,
+                                #        clear_old_points=False,
+                                #    )
+                                #else:
+                                #    _, _, _ = net.train_add_new_points(
+                                #        inference_state=train_state,
+                                #        frame_idx=id,
+                                #        obj_id=ann_obj_id,
+                                #        points=points,
+                                #        labels=labels,
+                                #        clear_old_points=False,
+                                #    )
                             elif prompt == 'bbox':
                                 bbox = bbox_dict[id][ann_obj_id]
-                                if args.distributed:
-                                    _, _, _ = net.module.train_add_new_bbox(
-                                        inference_state=train_state,
-                                        frame_idx=id,
-                                        obj_id=ann_obj_id,
-                                        bbox=bbox.to(device=GPUdevice),
-                                        clear_old_points=False,
-                                    )
-                                else:
-                                    _, _, _ = net.train_add_new_bbox(
-                                        inference_state=train_state,
-                                        frame_idx=id,
-                                        obj_id=ann_obj_id,
-                                        bbox=bbox.to(device=GPUdevice),
-                                        clear_old_points=False,
-                                    )
+                                bbox = bbox.reshape(-1, 1, 4)
+                                for prompt_idx in range(len(bbox)):
+                                    if args.distributed:
+                                        _, _, _ = net.module.train_add_new_bbox(
+                                            inference_state=train_state,
+                                            frame_idx=id,
+                                            obj_id=ann_obj_id,
+                                            bbox=bbox[prompt_idx].to(device=GPUdevice),
+                                            clear_old_points=False,
+                                        )
+                                    else:
+                                        _, _, _ = net.train_add_new_bbox(
+                                            inference_state=train_state,
+                                            frame_idx=id,
+                                            obj_id=ann_obj_id,
+                                            bbox=bbox[prompt_idx].to(device=GPUdevice),
+                                            clear_old_points=False,
+                                        )
+
+                                #if args.distributed:
+                                #    _, _, _ = net.module.train_add_new_bbox(
+                                #        inference_state=train_state,
+                                #        frame_idx=id,
+                                #        obj_id=ann_obj_id,
+                                #        bbox=bbox.to(device=GPUdevice),
+                                #        clear_old_points=False,
+                                #    )
+                                #else:
+                                #    _, _, _ = net.train_add_new_bbox(
+                                #        inference_state=train_state,
+                                #        frame_idx=id,
+                                #        obj_id=ann_obj_id,
+                                #        bbox=bbox.to(device=GPUdevice),
+                                #        clear_old_points=False,
+                                #    )
                         except KeyError:
                             if args.distributed:
                                 _, _, _ = net.module.train_add_new_mask(
@@ -322,7 +363,7 @@ def train_sam(args, net: nn.Module, optimizer1, optimizer2, train_loader,
                             mask = mask_dict[id][ann_obj_id].to(dtype = torch.float32, device = GPUdevice)
                         except KeyError:
                             mask = torch.zeros(pred_mask.shape).to(device=GPUdevice)
-                        if args.train_vis:
+                        if args.train_vis and (not args.distributed or args.global_rank == 0):
                             os.makedirs(f'./temp/train/{os.path.basename(name[0]).split(".")[0]}/{id}', exist_ok=True)
                             img_show = imgs_tensor[id, :, :, :].detach().cpu().permute(1, 2, 0).numpy()
                             pred_show = torch.sigmoid(pred_mask)[0, 0, :, :].detach().cpu().numpy() > 0.5
@@ -409,8 +450,7 @@ def validation_sam(args, val_loader, epoch, net: nn.Module, rng):
     prompt_freq = args.prompt_freq
     lossfunc = combined_loss.to(device=GPUdevice, dtype=torch.bfloat16)
 
-    #prompt = rng.choice(['click', 'bbox'])
-    prompt = 'bbox'
+    prompt = rng.choice(['click', 'bbox'])
     print(f"Running validation with [{prompt}] prompt")
 
     with tqdm(total=n_val, desc=pbar_desc, unit='batch', leave=False) as pbar:
@@ -455,42 +495,83 @@ def validation_sam(args, val_loader, epoch, net: nn.Module, rng):
                             if prompt == 'click':
                                 points = pt_dict[id][ann_obj_id].to(device=GPUdevice)
                                 labels = point_labels_dict[id][ann_obj_id].to(device=GPUdevice)
-                                if args.distributed:
-                                    _, _, _ = net.module.train_add_new_points(
-                                        inference_state=train_state,
-                                        frame_idx=id,
-                                        obj_id=ann_obj_id,
-                                        points=points,
-                                        labels=labels,
-                                        clear_old_points=False,
-                                    )
-                                else:
-                                    _, _, _ = net.train_add_new_points(
-                                        inference_state=train_state,
-                                        frame_idx=id,
-                                        obj_id=ann_obj_id,
-                                        points=points,
-                                        labels=labels,
-                                        clear_old_points=False,
-                                    )
+                                points = points.reshape(-1, 1, 2) # [B, N, 2] -> [B*N, 1, 2]
+                                labels = labels.reshape(-1, 1) # [B, N] -> [B*N]
+                                for prompt_idx in range(len(points)):
+                                    if args.distributed:
+                                        _, _, _ = net.module.train_add_new_points(
+                                            inference_state=train_state,
+                                            frame_idx=id,
+                                            obj_id=ann_obj_id,
+                                            points=points[prompt_idx],
+                                            labels=labels[prompt_idx],
+                                            clear_old_points=False,
+                                        )
+                                    else:
+                                        _, _, _ = net.train_add_new_points(
+                                            inference_state=train_state,
+                                            frame_idx=id,
+                                            obj_id=ann_obj_id,
+                                            points=points[prompt_idx],
+                                            labels=labels[prompt_idx],
+                                            clear_old_points=False,
+                                        )
+
+                                #if args.distributed:
+                                #    _, _, _ = net.module.train_add_new_points(
+                                #        inference_state=train_state,
+                                #        frame_idx=id,
+                                #        obj_id=ann_obj_id,
+                                #        points=points,
+                                #        labels=labels,
+                                #        clear_old_points=False,
+                                #    )
+                                #else:
+                                #    _, _, _ = net.train_add_new_points(
+                                #        inference_state=train_state,
+                                #        frame_idx=id,
+                                #        obj_id=ann_obj_id,
+                                #        points=points,
+                                #        labels=labels,
+                                #        clear_old_points=False,
+                                #    )
                             elif prompt == 'bbox':
                                 bbox = bbox_dict[id][ann_obj_id]
-                                if args.distributed:
-                                    _, _, _ = net.module.train_add_new_bbox(
-                                        inference_state=train_state,
-                                        frame_idx=id,
-                                        obj_id=ann_obj_id,
-                                        bbox=bbox.to(device=GPUdevice),
-                                        clear_old_points=False,
-                                    )
-                                else:
-                                    _, _, _ = net.train_add_new_bbox(
-                                        inference_state=train_state,
-                                        frame_idx=id,
-                                        obj_id=ann_obj_id,
-                                        bbox=bbox.to(device=GPUdevice),
-                                        clear_old_points=False,
-                                    )
+                                bbox = bbox.reshape(-1, 1, 4) # [B, N, 4] -> [B*N, 4]
+                                for prompt_idx in range(len(bbox)):
+                                    if args.distributed:
+                                        _, _, _ = net.module.train_add_new_bbox(
+                                            inference_state=train_state,
+                                            frame_idx=id,
+                                            obj_id=ann_obj_id,
+                                            bbox=bbox[prompt_idx].to(device=GPUdevice),
+                                            clear_old_points=False,
+                                        )
+                                    else:
+                                        _, _, _ = net.train_add_new_bbox(
+                                            inference_state=train_state,
+                                            frame_idx=id,
+                                            obj_id=ann_obj_id,
+                                            bbox=bbox[prompt_idx].to(device=GPUdevice),
+                                            clear_old_points=False,
+                                        )
+
+                                #if args.distributed:
+                                #    _, _, _ = net.module.train_add_new_bbox(
+                                #        inference_state=train_state,
+                                #        frame_idx=id,
+                                #        obj_id=ann_obj_id,
+                                #        bbox=bbox.to(device=GPUdevice),
+                                #        clear_old_points=False,
+                                #    )
+                                #else:
+                                #    _, _, _ = net.train_add_new_bbox(
+                                #        inference_state=train_state,
+                                #        frame_idx=id,
+                                #        obj_id=ann_obj_id,
+                                #        bbox=bbox.to(device=GPUdevice),
+                                #        clear_old_points=False,
+                                #    )
                         except KeyError:
                             if args.distributed:
                                 _, _, _ = net.module.train_add_new_mask(
@@ -559,7 +640,7 @@ def validation_sam(args, val_loader, epoch, net: nn.Module, rng):
                         except KeyError:
                             #mask = torch.zeros_like(pred).to(device=GPUdevice)
                             mask = torch.zeros(pred_mask.shape).to(device=GPUdevice)
-                        if args.vis:
+                        if args.vis and (not args.distributed or args.global_rank == 0):
                             os.makedirs(f'./temp/val/{name}/{id}', exist_ok=True)
                             img_show = imgs_tensor[id, :, :, :].detach().cpu().permute(1, 2, 0).numpy()
                             #pred_show = pred[0, 0, :, :].detach().cpu().numpy() > 0.5

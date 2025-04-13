@@ -70,6 +70,7 @@ SAM_CONFIG="sam2_hiera_t_384"
 VIDEO_LENGTH=4
 BATCH_SIZE=1
 SEED=2025
+MAX_TARGETS=8
 
 NIFTI_DATA_PATH="/home/lifeifei/projects/rrg-mgoubran/NeuroSAM_data/data"
 EXP_NAME="NeuroSAM2D-Dist-GPU"
@@ -92,6 +93,7 @@ srun torchrun \
     -sam_ckpt "checkpoints/MedSAM2_pretrain.pth" \
     -video_length $VIDEO_LENGTH \
     -b $BATCH_SIZE \
+    -max_targets $MAX_TARGETS \
     -data_path $NIFTI_DATA_PATH \
     -sam_config $SAM_CONFIG \
     -seed $SEED

@@ -305,7 +305,7 @@ class SAM2Base(torch.nn.Module):
         if point_inputs is not None:
             sam_point_coords = point_inputs["point_coords"]
             sam_point_labels = point_inputs["point_labels"]
-            assert sam_point_coords.size(0) == B and sam_point_labels.size(0) == B
+            assert sam_point_coords.size(0) == B and sam_point_labels.size(0) == B, f"sam_point_coords.size(0): {sam_point_coords.size(0)}, sam_point_labels.size(0): {sam_point_labels.size(0)}"
         else:
             # If no points are provide, pad with an empty point (with label -1)
             sam_point_coords = torch.zeros(B, 1, 2, device=device)
