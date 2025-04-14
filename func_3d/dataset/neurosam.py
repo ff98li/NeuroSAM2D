@@ -250,6 +250,28 @@ class NEUROSAM(Dataset):
         pt_dict = {}
         bbox_dict = {}
 
+        """
+        suggested_prompt_dict = {
+            obj_id: ["click"], ["bbox"], ["click", "bbox"], 3 choose 1
+        } ## TODO
+        """
+
+        mask_array_3d = mask_tensor_3d.numpy()
+        obj_list_3d = np.unique(mask_array_3d[mask_array_3d > 0])
+        if self.max_targets is not None and len(obj_list_3d) > self.max_targets:
+            choose_targets = self.rng.choice(obj_list_3d, size=self.max_targets, replace=False)
+            obj_list_3d = choose_targets
+            mask_array_3d_new = np.zeros_like(mask_array_3d)
+            for obj in obj_list_3d:
+                """Place holder for dynamic prompt suggestion
+                mask_array_3d_temp = np.zeros_like(mask_array_3d)
+                mask_array_3d_temp[mask_array_3d == obj] = 1
+                suggested_prompt_dict[obj] = get_suggested_prompt(mask_array_3d_temp) ## TODO
+                """
+                mask_array_3d_new[mask_array_3d == obj] = obj
+            mask_array_3d = mask_array_3d_new
+        mask_tensor_3d = torch.tensor(mask_array_3d)
+
         for frame_index in range(starting_frame, starting_frame + video_length):
             try:
                 img = img_tensor_3d[..., frame_index]
@@ -269,25 +291,20 @@ class NEUROSAM(Dataset):
 
             mask = mask.numpy()
             obj_list = np.unique(mask[mask > 0])
-            if self.max_targets is not None and len(obj_list) > self.max_targets:
-                choose_targets = self.rng.choice(obj_list, size=self.max_targets, replace=False)
-                obj_list = choose_targets
-                mask_new = np.zeros_like(mask)
-                for obj in obj_list:
-                    mask_new[mask == obj] = obj
-                mask = mask_new
-            
-            ## TODO: Add dynamic prompt suggestion here
             
             diff_obj_mask_dict = {}
 
             diff_obj_bbox_dict = {}
             diff_obj_pt_dict = {}
             diff_obj_point_label_dict = {}
+
             for obj in obj_list:
                 obj_mask = mask == obj
                 obj_mask = obj_mask.astype(int)
 
+                """Place holder for dynamic prompt suggestion
+                if suggested_prompt_dict[obj] == ["click"]:
+                """
                 diff_obj_point_label_dict[obj], diff_obj_pt_dict[obj] = (
                     random_click(
                         np.squeeze(obj_mask, 0),
@@ -295,11 +312,17 @@ class NEUROSAM(Dataset):
                         seed=self.seed
                     )
                 )
+                """Place holder for dynamic prompt suggestion
+                elif suggested_prompt_dict[obj] == ["bbox"]:
+                """
                 bbox = generate_bbox(
                     np.squeeze(obj_mask, 0),
                     variation=self.variation,
                     seed=self.seed,
                 )
+                """Place holder for dynamic prompt suggestion
+                ## else do both
+                """
                 if np.isnan(bbox).any():
                     print(f"bbox is nan for {obj}")
                     print(f"bbox: {bbox}")
@@ -325,5 +348,7 @@ class NEUROSAM(Dataset):
             "p_label": point_label_dict,
             "pt": pt_dict,
             "image_meta_dict": image_meta_dict,
+            # Place holder for dynamic prompt suggestion
+            #"suggested_prompt_dict": suggested_prompt_dict ## TODO
         }
         return pack

@@ -512,6 +512,9 @@ def validation_sam(args, val_loader, epoch, net: nn.Module, rng):
                 for id in prompt_frame_id:
                     for ann_obj_id in obj_list:
                         try:
+                            """Place holder for dynamic prompt suggestion
+                            prompt = rng.choice(suggested_prompt_dict[ann_obj_id])
+                            """
                             if prompt == 'click':
                                 points = pt_dict[id][ann_obj_id].to(device=GPUdevice)
                                 labels = point_labels_dict[id][ann_obj_id].to(device=GPUdevice)
