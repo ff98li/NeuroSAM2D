@@ -31,6 +31,14 @@ use_k_lora: False # whether LoRA is applied to the key projection in addition to
 
 ## What could be improved in this codebase
 
+* In `func_3d/dataset/neurosam.py`, whether to limit the number of slices for evaluation?
+```python
+if mode == "Training":
+    self.video_length = args.video_length
+else:
+    self.video_length = None ## this is taking too long
+```
+
 * Add an extra argument to control the number of target objects to use for training to avoid the GPU memory spiking issue (more constant VRAM usage). [Done]
 
 * Dynamically adjust the probability of using click vs bbox prompts based on validation performance (this would require more work to implement).

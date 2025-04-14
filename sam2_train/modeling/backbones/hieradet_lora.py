@@ -1,3 +1,6 @@
+""" LoRA for Hiera
+    GitHub@ff98li
+"""
 import math
 import torch
 from torch import nn, Tensor

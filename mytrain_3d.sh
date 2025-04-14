@@ -25,9 +25,9 @@ NIFTI_DATA_PATH="/home/lifeifei/projects/rrg-mgoubran/NeuroSAM_data/data"
 IMAGE_SIZE=512
 SAM_CONFIG="sam2_hiera_t_512"
 VIDEO_LENGTH=4
-BATCH_SIZE=1
+BATCH_SIZE=2
 SEED=2025
-MAX_TARGETS=8
+MAX_TARGETS=3
 EXP_NAME="NeuroSAM2D-Single-GPU"
 
 python -u train_3d.py \
