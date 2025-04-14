@@ -20,7 +20,7 @@ def parse_args():
     parser.add_argument('-dataset', default='btcv' ,type=str,help='dataset name')
     parser.add_argument('-sam_ckpt', type=str, default=None , help='sam checkpoint address')
     parser.add_argument('-sam_config', type=str, default=None , help='sam checkpoint address')
-    parser.add_argument('-video_length', type=int, default=8, help='sam checkpoint address')
+    parser.add_argument('-video_length', type=int, default=8, help='video length')
     parser.add_argument(
         '-b',
         '--batch_size',

@@ -124,7 +124,17 @@ The dataset json file needs to contain at least the following fields:
 ```
 and placed under each dataset folder, e.g. `path/to/data/DatasetName/dataset.json`.
 
-
+## Training
+Please refer to `my_train_3d.sh`.
+To resume training from a checkpoint,
+```bash
+python -u train_3d.py \
+    -exp_name "${EXP_NAME}-${IMAGE_SIZE}-${VIDEO_LENGTH}-${BATCH_SIZE}-${SEED}" \
+    ...
+    -max_targets $MAX_TARGETS \
+    -resume "path/to/checkpoint.pth"
+```
+Checkpoints are saved in `logs/${EXP_NAME}_<date>_<time>/Model/` folder.
 
 # Original README content
 <h1 align="center">● Medical SAM 2: Segment Medical Images As Video Via Segment Anything Model 2</h1>
