@@ -150,7 +150,7 @@ def sanity_check(args, rng):
                     pts = pt_dict[id][ann_obj_id].clone()
                     pts = pts.reshape(-1, 2).cpu().numpy()
                     for pt in pts:
-                        ax[0].scatter(pt[0], pt[1], s=100, c='red')
+                        ax[0].scatter(pt[0], pt[1], s=10, c='red')
                 except KeyError:
                     pass
             #ax[1].imshow(mask[0, 0, :, :].numpy(), cmap='gray')
@@ -205,13 +205,17 @@ def main(args, rng):
                   f"{dist.get_world_size()}."
                   f"Setting device to {GPUdevice}")
 
+    vit_layers = []
+    if args.finetune_backbone:
+        vit_layers += list(net.module.image_encoder.trunk.parameters())
+    if args.finetune_neck:
+        vit_layers += list(net.module.image_encoder.neck.parameters())
     sam_layers = (
                   []
                 #   + list(net.image_encoder.parameters())
                 #   + list(net.sam_prompt_encoder.parameters())
                 #  + list(net.module.image_encoder.parameters())
-                ## Finetune the neck instead of the whole image encoder?
-                   + list(net.module.image_encoder.neck.parameters())
+                  # + list(net.module.image_encoder.neck.parameters())
                   + list(net.module.sam_prompt_encoder.parameters())
                   + list(net.module.sam_mask_decoder.parameters())
                   )
@@ -243,6 +247,18 @@ def main(args, rng):
             schedulers = [
                 {
                     "lr": CosineParamScheduler(start_value=args.lr_mem, end_value=args.lr_mem * 0.01),
+                    "weight_decay": ConstantParamScheduler(0.1)
+                }
+            ]
+        )
+    if len(vit_layers) == 0:
+        optimizer3 = None
+    else:
+        optimizer3 = Optimizer(
+            optimizer = optim.AdamW(vit_layers, lr=args.lr_vit, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.1, amsgrad=False),
+            schedulers = [
+                {
+                    "lr": CosineParamScheduler(start_value=args.lr_vit, end_value=args.lr_vit * 0.01),
                     "weight_decay": ConstantParamScheduler(0.1)
                 }
             ]
@@ -299,7 +315,7 @@ def main(args, rng):
 
         optimizer1.optimizer.load_state_dict(checkpoint['optimizer1'])
         optimizer2.optimizer.load_state_dict(checkpoint['optimizer2'])
-
+        optimizer3.optimizer.load_state_dict(checkpoint['optimizer3'])
         best_dice = checkpoint['best_dice']
         start_epoch = checkpoint['epoch'] + 1
         dist.barrier()
@@ -312,7 +328,7 @@ def main(args, rng):
 
         net.train()
         time_start = time.time()
-        loss, prompt_loss, non_prompt_loss = function.train_sam(args, net, optimizer1, optimizer2, nice_train_loader, epoch, rng)
+        loss, prompt_loss, non_prompt_loss = function.train_sam(args, net, optimizer1, optimizer2, optimizer3, nice_train_loader, epoch, rng)
         if args.distributed:
             losses, prompt_losses, non_prompt_losses = [[None for _ in range(dist.get_world_size())] for _ in range(3)]
             dist.all_gather_object(losses, loss)
@@ -341,7 +357,8 @@ def main(args, rng):
                 #"train/lr_sam": optimizer1.param_groups[0]['lr'] if optimizer1 else 0,
                 #"train/lr_mem": optimizer2.param_groups[0]['lr'] if optimizer2 else 0
                 "train/lr_sam": optimizer1.optimizer.param_groups[0]['lr'] if optimizer1 else 0,
-                "train/lr_mem": optimizer2.optimizer.param_groups[0]['lr'] if optimizer2 else 0
+                "train/lr_mem": optimizer2.optimizer.param_groups[0]['lr'] if optimizer2 else 0,
+                "train/lr_vit": optimizer3.optimizer.param_groups[0]['lr'] if optimizer3 else 0
             })
 
         net.eval()
@@ -371,6 +388,7 @@ def main(args, rng):
                         'model': net.module.state_dict() if args.distributed else net.state_dict(),
                         'optimizer1': optimizer1.optimizer.state_dict() if optimizer1 else None,
                         'optimizer2': optimizer2.optimizer.state_dict() if optimizer2 else None,
+                        'optimizer3': optimizer3.optimizer.state_dict() if optimizer3 else None,
                         'epoch': epoch,
                         'best_dice': best_dice,
                     },
@@ -386,6 +404,7 @@ def main(args, rng):
                             'model': net.module.state_dict() if args.distributed else net.state_dict(),
                             'optimizer1': optimizer1.optimizer.state_dict() if optimizer1 else None,
                             'optimizer2': optimizer2.optimizer.state_dict() if optimizer2 else None,
+                            'optimizer3': optimizer3.optimizer.state_dict() if optimizer3 else None,
                             'epoch': epoch,
                             'best_dice': best_dice
                         },

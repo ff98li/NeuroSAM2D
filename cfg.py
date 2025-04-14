@@ -53,7 +53,10 @@ def parse_args():
     parser.add_argument('--wandb_mode', type=str, default='offline', help='Wandb mode')
     parser.add_argument('--wandb_project', type=str, default='NeuroSAM2D', help='Wandb project name')
     parser.add_argument('--wandb_entity', type=str, default=None, help='Wandb entity name')
-    
+    ## finetune image encoder
+    parser.add_argument('--finetune_backbone', action='store_true', help='Finetune the image encoder')
+    parser.add_argument('--finetune_neck', action='store_true', help='Finetune the neck')
+    parser.add_argument('-lr_vit', type=float, default=5e-5, help='learning rate for the image encoder')
     opt = parser.parse_args()
 
     return opt

@@ -65,15 +65,16 @@ echo "SLURM_GPUS_ON_NODE"=$SLURM_GPUS_ON_NODE
 echo "SLURM_SUBMIT_DIR"=$SLURM_SUBMIT_DIR
 echo SLURM_NTASKS=$SLURM_NTASKS
 
-IMAGE_SIZE=384
-SAM_CONFIG="sam2_hiera_t_384"
+IMAGE_SIZE=512
+SAM_CONFIG="sam2_hiera_t_lora_512"
 VIDEO_LENGTH=4
 BATCH_SIZE=1
 SEED=2025
 MAX_TARGETS=8
 
 NIFTI_DATA_PATH="/home/lifeifei/projects/rrg-mgoubran/NeuroSAM_data/data"
-EXP_NAME="NeuroSAM2D-Dist-GPU"
+EXP_NAME="NeuroSAM2D-Dist-GPU-LORA"
+RESUME=""
 
 srun torchrun \
     --nproc_per_node=$GPUS_PER_NODE \
@@ -96,4 +97,7 @@ srun torchrun \
     -max_targets $MAX_TARGETS \
     -data_path $NIFTI_DATA_PATH \
     -sam_config $SAM_CONFIG \
-    -seed $SEED
+    -seed $SEED \
+    --finetune_backbone \
+    --finetune_neck \
+    -lr_vit 5e-5

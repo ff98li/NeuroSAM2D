@@ -171,8 +171,16 @@ combined_loss = CombinedLoss(
     focal_alpha_obj_score=focal_alpha_obj_score
 )
 
-def train_sam(args, net: nn.Module, optimizer1, optimizer2, train_loader,
-          epoch, rng):
+def train_sam(
+    args,
+    net: nn.Module,
+    optimizer1,
+    optimizer2,
+    optimizer3,
+    train_loader,
+    epoch,
+    rng
+):
     hard = 0
     epoch_loss = 0
     epoch_prompt_loss = 0
@@ -407,7 +415,6 @@ def train_sam(args, net: nn.Module, optimizer1, optimizer2, train_loader,
                 epoch_prompt_loss += prompt_loss.item()
                 if prompt_freq > 1:
                     epoch_non_prompt_loss += non_prompt_loss.item()
-
                 # nn.utils.clip_grad_value_(net.parameters(), 0.1)
                 if non_prompt_loss is not int and optimizer2 is not None and prompt_freq > 1:
                     non_prompt_loss.backward(retain_graph=True)
@@ -416,10 +423,23 @@ def train_sam(args, net: nn.Module, optimizer1, optimizer2, train_loader,
                 if optimizer1 is not None:
                     prompt_loss.backward()
                     optimizer1.step(where = where, step = current_step)
-                    #optimizer1.step()
+                    #for param in net.image_encoder.trunk.parameters():
+                    #    print(param.grad.mean().item())
+                if optimizer3 is not None:
+                    optimizer3.step(where = where, step = current_step)
+                    ## Making sure gradients were computed only for the LoRA layers
+                    #for name, param in net.image_encoder.trunk.named_parameters():
+                    #    if param.grad is not None:
+                    #        print(name, param.grad.norm().item())
+                    #for name, param in net.image_encoder.neck.named_parameters():
+                    #    if param.grad is not None:
+                    #        print(name, param.grad.norm().item())
+                if optimizer1 is not None:
                     optimizer1.zero_grad()
                 if optimizer2 is not None:
                     optimizer2.zero_grad()
+                if optimizer3 is not None:
+                    optimizer3.zero_grad()
                 if args.distributed:
                     net.module.reset_state(train_state)
                 else:

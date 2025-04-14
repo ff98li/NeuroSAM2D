@@ -2,6 +2,15 @@
 
 This codebase is adapted from [Medical-SAM2](https://github.com/MedicineToken/Medical-SAM2). It extends the original implementation with additional features and optimizations for neuroimaging segmentation tasks.
 
+* Added LoRA to Hiera. A yaml config reference is provided in `sam2_train/sam2_hiera_t_lora_512.yaml`. Specifically,
+```yaml
+lora_r: 32 # the rank of the LoRA matrices
+lora_alpha: 8.0 # scaling factor that determines adaptation strength
+lora_dropout: 0.0 # applies dropout to the LoRA
+use_output_lora: True # whether to apply LoRA to the output projection matrix in the attention mechanism
+use_k_lora: False # whether LoRA is applied to the key projection in addition to query and value.
+```
+
 * The original Medical-SAM2 codebase used only computed the segmentation loss with BCE loss only. Auxiliary losses for IoU and object predictions are added in this codebase to match Meta's released training script.
     * Auxiliary losses:
         * Segmentation loss: Sigmoid Focal Loss + Dice Loss
@@ -22,20 +31,24 @@ This codebase is adapted from [Medical-SAM2](https://github.com/MedicineToken/Me
 
 ## What could be improved in this codebase
 
-* Add an extra argument to control the number of target objects to use for training to avoid the GPU memory spiking issue (more constant VRAM usage).
+* Add an extra argument to control the number of target objects to use for training to avoid the GPU memory spiking issue (more constant VRAM usage). [Done]
 
 * Dynamically adjust the probability of using click vs bbox prompts based on validation performance (this would require more work to implement).
     * So far the click prompt performs worse than the bbox prompt.
+    * Or choosing the best prompt based on targets' morphological properties.
 
 * Consider fine-tuning the image encoder's neck (last layer of the image encoder) even if leaving out the image encoder, since the image encoder is pre-trained on 8-bit input range (0-255) while this codebase directly apply MONAI transforms to the input Nifti images, normalizing the input images to the range of [-1, 1]. The shift in data distribution could be significant and affect feature extraction.
     * Improved validation performance observed when fine-tuning with the image encoder's neck.
     * The neck is a Feature Pyramid Network.
-    * A more brute force approach: change `b_min` and `b_max` in `ScaleIntensityRangePercentilesd` from `[-1, 1]` to `[0, 1]` to match the image encoder's pre-trained input range. (haven't tried this yet)
+    * Or use the LoRA approach to fine-tune the image encoder.
 
 * If fine-tuning the image encoder, consider adding another optimizer and lr scheduler for the image encoder.
 
 * Gradient clipping has not been applied.
     * SAM2 used gradient clipping in their released training script with `max_norm=0.1, norm_type=2`.
+
+## WIP
+1. Add dynamic prompt suggestion based on targets' morphological properties.
 
 
 ## Installation (on CCDB cluster)

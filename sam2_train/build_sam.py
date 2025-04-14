@@ -79,10 +79,18 @@ def build_sam2_video_predictor(
 def _load_checkpoint(model, ckpt_path):
     if ckpt_path is not None:
         sd = torch.load(ckpt_path, map_location="cpu")["model"]
-        missing_keys, unexpected_keys = model.load_state_dict(sd)
+        missing_keys, unexpected_keys = model.load_state_dict(sd, strict=False)
         if missing_keys:
-            logging.error(missing_keys)
-            raise RuntimeError()
+            is_lora = False
+            for key in missing_keys:
+                if 'lora' in key:
+                    is_lora = True
+                    break
+            if is_lora:
+                logging.info("Loading SAM2 default pretrained weights into model with addition LoRA layers.")
+            else:
+                logging.error(missing_keys)
+                raise RuntimeError()
         if unexpected_keys:
             logging.error(unexpected_keys)
             raise RuntimeError()
