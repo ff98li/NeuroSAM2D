@@ -22,12 +22,12 @@ export WANDB_MODE="offline"
 
 NIFTI_DATA_PATH="/home/lifeifei/projects/rrg-mgoubran/NeuroSAM_data/data"
 
-IMAGE_SIZE=512
-SAM_CONFIG="sam2_hiera_t_lora_512"
-VIDEO_LENGTH=4
-BATCH_SIZE=2
+IMAGE_SIZE=256
+SAM_CONFIG="sam2_hiera_t_lora_256"
+VIDEO_LENGTH=8
+BATCH_SIZE=4
 SEED=2025
-MAX_TARGETS=3
+MAX_TARGETS=8
 EXP_NAME="NeuroSAM2D-Single-GPU-LORA"
 
 python -u train_3d.py \
@@ -40,7 +40,7 @@ python -u train_3d.py \
     -image_size $IMAGE_SIZE \
     -out_size $IMAGE_SIZE \
     --batch_size $BATCH_SIZE \
-    -num_workers 8 \
+    -num_workers 16 \
     -dataset "neurosam" \
     -sam_ckpt "checkpoints/MedSAM2_pretrain.pth" \
     -video_length $VIDEO_LENGTH \

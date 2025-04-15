@@ -220,7 +220,7 @@ def train_sam(
                 point_labels_dict = pack['p_label']
             elif prompt == 'bbox':
                 bbox_dict = pack['bbox']
-            imgs_tensor = imgs_tensor.squeeze(0)
+            imgs_tensor = imgs_tensor.squeeze(0) ## [1, N, 3, H, W]
             imgs_tensor = imgs_tensor.to(dtype = torch.float32, device = GPUdevice)
             
             if args.distributed:

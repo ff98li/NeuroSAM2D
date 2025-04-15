@@ -1,6 +1,6 @@
 """ Dataloader for the NEUROSAM dataset
     Anthony Rinaldi,
-    GitHub@ff98lifeifei,
+    GitHub@ff98li,
 """
 
 import argparse
@@ -152,10 +152,11 @@ class NEUROSAM(Dataset):
         #self.transform_msk = transform_msk
         self.seed = seed
         self.variation = variation
-        if mode == "Training":
-            self.video_length = args.video_length
-        else:
-            self.video_length = None ## TODO: should we constrain the length in validation? this is taking so long
+        #if mode == "Training":
+        #    self.video_length = args.video_length
+        #else:
+        #    self.video_length = None ## TODO: should we constrain the length in validation? this is taking so long
+        self.video_length = args.video_length
         self.max_targets = args.max_targets
         self.rng = np.random.RandomState(self.seed)
 
@@ -250,7 +251,9 @@ class NEUROSAM(Dataset):
         pt_dict = {}
         bbox_dict = {}
 
-        """
+        """Initialize the suggested prompt empty dictionary
+        suggested_prompt_dict = {}
+
         suggested_prompt_dict = {
             obj_id: ["click"], ["bbox"], ["click", "bbox"], 3 choose 1
         } ## TODO
@@ -270,6 +273,15 @@ class NEUROSAM(Dataset):
                 """
                 mask_array_3d_new[mask_array_3d == obj] = obj
             mask_array_3d = mask_array_3d_new
+        else:
+            ...
+            """
+            for obj in obj_list_3d:
+                # Place holder for dynamic prompt suggestion
+                mask_array_3d_temp = np.zeros_like(mask_array_3d)
+                mask_array_3d_temp[mask_array_3d == obj] = 1
+                suggested_prompt_dict[obj] = get_suggested_prompt(mask_array_3d_temp) ## TODO
+            """
         mask_tensor_3d = torch.tensor(mask_array_3d)
 
         for frame_index in range(starting_frame, starting_frame + video_length):

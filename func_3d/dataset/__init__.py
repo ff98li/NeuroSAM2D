@@ -42,6 +42,13 @@ def multi_video_collate(batch):
     merged_pt = dict()
     merged_label = dict()
     merged_p_label = dict()
+    """ Place holder for dynamic prompt suggestion
+    merged_suggested_prompt = dict()
+    ## suggested_prompt_dict: {obj_id: [prompt]}
+    for batch_idx, sample in enumerate(batch):
+        for obj_id, prompt in sample["suggested_prompt"].items():
+            merged_suggested_prompt[obj_id + offsets[batch_idx]] = prompt
+    """
     for frame_id in range(n_frames):
         #merged_prompt[frame_id] = dict()
         merged_bbox[frame_id] = dict()
@@ -87,6 +94,8 @@ def multi_video_collate(batch):
                 for sample in batch
             ]
         }
+        # Place holder for dynamic prompt suggestion
+        # "suggested_prompt": merged_suggested_prompt
     }
 
     return collated_data
